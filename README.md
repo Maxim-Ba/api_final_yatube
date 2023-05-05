@@ -11,11 +11,12 @@
 
 ## Установка
 
-- pip install -r requirements.txt
-- python -m venv venv
-- source venv/Scripts/acticate
-- cd /yatube_api
-- python manage.py runserver
-- http://127.0.0.1:8000
+- `python -m venv venv` (создание виртуального окружения)
+- `source venv/Scripts/acticate` (активация виртуального окружения)
+- `pip install -r requirements.txt` (установка зависимостей)
+- `cd /yatube_api` (переходим в проект)
+- `python manage.py runserver` (запуск сервера)
 
-## Примеры
+## Документация
+
+После запуска `runserver`, можно перейти в [документацию](http://localhost:8000/redoc)

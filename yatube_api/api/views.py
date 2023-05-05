@@ -1,5 +1,6 @@
-from rest_framework import viewsets, permissions, mixins  # response
+from rest_framework import viewsets, permissions, mixins, filters
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import LimitOffsetPagination
 
 # from django.http import HttpResponseBadRequest
 from posts.models import Post, Group, Follow, User
@@ -17,6 +18,7 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = (CheckAllowChange,)
+    pagination_class = LimitOffsetPagination
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -38,6 +40,8 @@ class FollowViewSet(viewsets.ModelViewSet):
         CheckAllowChange,
         permissions.IsAuthenticated,
     )
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ("following__username",)
 
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
