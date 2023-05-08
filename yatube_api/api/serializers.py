@@ -4,7 +4,9 @@ from rest_framework.relations import (
     StringRelatedField,
     PrimaryKeyRelatedField,
 )
-from posts.models import Group, Post, Comment, Follow
+from rest_framework.exceptions import ValidationError
+
+from posts.models import Group, Post, Comment, Follow, User
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -37,8 +39,10 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    following = serializers.StringRelatedField(read_only=True)
-    user = serializers.StringRelatedField(read_only=True)
+    following = serializers.StringRelatedField()
+    user = serializers.StringRelatedField(
+        default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
         model = Follow
@@ -46,3 +50,25 @@ class FollowSerializer(serializers.ModelSerializer):
             "following",
             "user",
         )
+
+    def validate(self, data):
+        if "following" not in self.initial_data:
+            raise ValidationError(detail="Нет поля following")
+
+        if not User.objects.filter(
+            username=self.initial_data["following"]
+        ).exists():
+            raise ValidationError(
+                detail="Нет такого значения в поле following"
+            )
+
+        following = User.objects.get(username=self.initial_data["following"])
+        if following.id == self.context["request"].user.id:
+            raise ValidationError(detail="Нельзя подписаться на себя")
+
+        if Follow.objects.filter(
+            user=self.context["request"].user, following=following
+        ).exists():
+            raise ValidationError(detail="Подписка уже есть")
+
+        return data

@@ -1,8 +1,7 @@
-from rest_framework import viewsets, permissions, mixins, filters
 from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, permissions, filters, mixins
 from rest_framework.pagination import LimitOffsetPagination
 
-# from django.http import HttpResponseBadRequest
 from posts.models import Post, Group, Follow, User
 from .serializers import (
     PostSerializer,
@@ -11,7 +10,6 @@ from .serializers import (
     FollowSerializer,
 )
 from .permissions import CheckAllowChange
-from rest_framework.exceptions import ValidationError
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -24,17 +22,15 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-class GroupViewSet(
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet,
-):
+class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class FollowViewSet(
+    mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
+):
     serializer_class = FollowSerializer
     permission_classes = (
         CheckAllowChange,
@@ -46,22 +42,9 @@ class FollowViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
-        if "following" not in self.request.data:
-            raise ValidationError
-        try:
-            following = User.objects.get(
-                username=self.request.data["following"]
-            )
-            if following.id == self.request.user.id:
-                raise ValidationError(detail="Нельзя подписаться на себя")
-            if Follow.objects.filter(
-                user=self.request.user, following=following
-            ).exists():
-                raise ValidationError(detail="Подписка уже есть")
-            serializer.save(user=self.request.user, following=following)
-        except Exception:
-            raise ValidationError
+    def perform_create(self, serializer: FollowSerializer):
+        following = User.objects.get(username=self.request.data["following"])
+        serializer.save(user=self.request.user, following=following)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
