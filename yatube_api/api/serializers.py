@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import (
     SlugRelatedField,
@@ -66,7 +67,7 @@ class FollowSerializer(serializers.ModelSerializer):
         ]
 
     def validate_following(self, value):
-        following = User.objects.filter(username=value).first()
+        following = get_object_or_404(User, username=value)
         if not following:
             raise ValidationError(
                 detail="Нет такого значения в поле following"
