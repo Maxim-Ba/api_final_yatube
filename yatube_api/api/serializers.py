@@ -39,9 +39,13 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    following = serializers.StringRelatedField()
-    user = serializers.StringRelatedField(
-        default=serializers.CurrentUserDefault()
+    following = serializers.SlugRelatedField(
+        slug_field="username", queryset=User.objects.all()
+    )
+    user = serializers.SlugRelatedField(
+        slug_field="username",
+        default=serializers.CurrentUserDefault(),
+        read_only=True,
     )
 
     class Meta:
@@ -50,25 +54,23 @@ class FollowSerializer(serializers.ModelSerializer):
             "following",
             "user",
         )
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=[
+                    "user",
+                    "following",
+                ],
+                message="Подписка уже есть",
+            )
+        ]
 
-    def validate(self, data):
-        if "following" not in self.initial_data:
-            raise ValidationError(detail="Нет поля following")
-
-        if not User.objects.filter(
-            username=self.initial_data["following"]
-        ).exists():
+    def validate_following(self, value):
+        following = User.objects.filter(username=value).first()
+        if not following:
             raise ValidationError(
                 detail="Нет такого значения в поле following"
             )
-
-        following = User.objects.get(username=self.initial_data["following"])
         if following.id == self.context["request"].user.id:
             raise ValidationError(detail="Нельзя подписаться на себя")
-
-        if Follow.objects.filter(
-            user=self.context["request"].user, following=following
-        ).exists():
-            raise ValidationError(detail="Подписка уже есть")
-
-        return data
+        return following
